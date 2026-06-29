@@ -102,29 +102,6 @@
 
 ---
 
-## 📂 Project Structure
-
-```text
-Vipani
-│
-├── client
-│   ├── src
-│   ├── public
-│   └── package.json
-│
-├── server
-│   ├── controllers
-│   ├── models
-│   ├── routes
-│   ├── middleware
-│   ├── utils
-│   └── package.json
-│
-└── README.md
-```
-
----
-
 ## ⚙️ Installation
 
 ### Clone Repository
