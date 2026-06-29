@@ -8,7 +8,7 @@ const createProduct = async (req, res) => {
       price,
       category,
       stock,
-      image,
+      // image,
     } = req.body;
 
     // Required fields
@@ -31,6 +31,11 @@ const createProduct = async (req, res) => {
         message: "Stock cannot be negative",
       });
     }
+
+    // Image from multer
+    const image = req.file
+      ? [req.file.filename]
+      : [];
 
     const product = await Product.create({
       name,
@@ -56,27 +61,82 @@ const createProduct = async (req, res) => {
 const getProducts = async (req, res) => {
   try {
 
-    const keyword = req.query.keyword;
+    const {
+      keyword,
+      category,
+      minPrice,
+      maxPrice,
+      page = 1,
+      limit = 5,
+      sort,
+    } = req.query;
 
-    let products;
+    const filter = {};
 
+    // Search
     if (keyword) {
-
-      products = await Product.find({
-        name: {
-          $regex: keyword,
-          $options: "i",
-        },
-      });
-
-    } else {
-
-      products = await Product.find();
-
+      filter.name = {
+        $regex: keyword,
+        $options: "i",
+      };
     }
 
+    // Category Filter
+    if (category) {
+      filter.category = category;
+    }
+
+    // Price Filter
+    if (minPrice || maxPrice) {
+      filter.price = {};
+
+      if (minPrice) {
+        filter.price.$gte = Number(minPrice);
+      }
+
+      if (maxPrice) {
+        filter.price.$lte = Number(maxPrice);
+      }
+    }
+
+    let sortOption = {};
+
+    if (sort === "price_asc") {
+      sortOption.price = 1;
+    }
+
+    if (sort === "price_desc") {
+      sortOption.price = -1;
+    }
+
+    if (sort === "newest") {
+      sortOption.createdAt = -1;
+    }
+
+    if (sort === "oldest") {
+      sortOption.createdAt = 1;
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const products = await Product.find(filter)
+      .sort(sortOption)
+      .skip(skip)
+      .limit(Number(limit));
+
+    const totalProducts =
+      await Product.countDocuments(filter);
+
+    const totalPages = Math.ceil(
+      totalProducts / Number(limit)
+    );
+
     return res.status(200).json({
-      count: products.length,
+      totalProducts,
+      currentPage: Number(page),
+      totalPages,
+      hasNextPage: Number(page) < totalPages,
+      hasPrevPage: Number(page) > 1,
       products,
     });
 
@@ -93,7 +153,8 @@ const getProducts = async (req, res) => {
 const getProductsById = async (req, res) => {
   try {
 
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id)
+      .populate("reviews.user", "name email");
 
     if (!product) {
       return res.status(404).json({
@@ -169,5 +230,73 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+const addReview = async (req, res) => {
+  try {
 
-module.exports = { createProduct , getProducts, getProductsById, updateProduct, deleteProduct};
+    const { rating, comment } = req.body;
+
+    const product = await Product.findById(
+      req.params.id
+    );
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Product not found",
+      });
+    }
+
+    const alreadyReviewed =
+      product.reviews.find(
+        (review) =>
+          review.user.toString() ===
+          req.user.userId
+      );
+
+    if (alreadyReviewed) {
+      return res.status(400).json({
+        message:
+          "You already reviewed this product",
+      });
+    }
+
+    const review = {
+      user: req.user.userId,
+      rating: Number(rating),
+      comment,
+    };
+
+    product.reviews.push(review);
+
+    product.numReviews =
+      product.reviews.length;
+
+    product.averageRating =
+      product.reviews.reduce(
+        (acc, item) => acc + item.rating,
+        0
+      ) / product.reviews.length;
+
+    await product.save();
+
+    return res.status(201).json({
+      message:
+        "Review added successfully",
+    });
+
+  } catch (error) {
+
+    return res.status(500).json({
+      message: error.message,
+    });
+
+  }
+};
+
+module.exports = {
+  createProduct,
+  getProducts,
+  getProductsById,
+  updateProduct,
+  deleteProduct,
+  addReview
+};

@@ -24,6 +24,16 @@ const userSchema = new mongoose.Schema({
         enum: ["user", "admin"],// user ne admin banava mate enum use kariye che
         default: "user"
     },
+
+    resetPasswordToken: {
+        type: String,
+        default: null
+    },
+ 
+    resetPasswordExpire: {
+        type: Date,
+        default: null
+    },
    
 },
     // Automatically add createdAt and updatedAt fields to the schema

@@ -2,35 +2,31 @@ const mongoose = require("mongoose");
 
 const productSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-    },
+    name: { type: String, required: true },
+    description: { type: String, required: true },
+    price: { type: Number, required: true },
+    category: { type: String, required: true },
+    stock: { type: Number, default: 0 },
 
-    description: {
-      type: String,
-      required: true,
-    },
-
-    price: {
+    // Admin set kari sake ke kya stock level pe alert aave
+    // default: 5 — mane stock 5 thhi ochhu thay to alert aave
+    lowStockThreshold: {
       type: Number,
-      required: true,
+      default: 5,
     },
 
-    category: {
-      type: String,
-      required: true,
-    },
+    reviews: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+        rating: { type: Number, required: true, min: 1, max: 5 },
+        comment: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
 
-    stock: {
-      type: Number,
-      default: 0,
-    },
-
-    image: {
-      type: [String],
-      default: [],
-    },
+    averageRating: { type: Number, default: 0 },
+    numReviews: { type: Number, default: 0 },
+    image: { type: [String], default: [] },
   },
   { timestamps: true }
 );
